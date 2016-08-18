@@ -3,7 +3,12 @@
 #include <TCanvas.h>
 #include <iostream>
 #include <TLorentzVector.h>
+#include <TFile.h>
+#include <TTree.h>
+#include <TBranch.h>
 #include <math.h>
+#include <vector>
+#include <iostream>
 
 Double_t deltaPhi(Double_t phi1, Double_t phi2)
 {
@@ -31,6 +36,7 @@ Bool_t isPassAccCondition_GenLepton_ECALGAP(double leadpt, double leadeta, doubl
 {
 	Bool_t isPassAcc = kFALSE;
 
+
 	if( leadpt > 30. && fabs(leadeta) < 2.5 && !( fabs(leadeta) > 1.4442 && fabs(leadeta) < 1.566 ) &&
 		subleadpt  > 10.  && fabs(subleadeta) < 2.5 && !( fabs(subleadeta) > 1.4442 && fabs(subleadeta) < 1.566 ) )
 		isPassAcc = 1;
@@ -40,6 +46,7 @@ Bool_t isPassAccCondition_GenLepton_ECALGAP(double leadpt, double leadeta, doubl
 
 Bool_t isPassAccCondition_Electron(double leadpt, double leadeta, double subleadpt, double subleadeta)
 {
+
 	Bool_t isPassAcc = kFALSE;
 	if( leadpt > 30 && fabs(leadeta) < 2.5 && !( fabs(leadeta) > 1.4442 && fabs(leadeta) < 1.566 ) &&
 		subleadpt  > 10  && fabs(subleadeta)  < 2.5 && !( fabs(subleadeta) > 1.4442 && fabs(subleadeta) < 1.566 ) )
@@ -48,7 +55,8 @@ Bool_t isPassAccCondition_Electron(double leadpt, double leadeta, double sublead
 	return isPassAcc;
 }
 
-void RECOEff_Study_Histos() {
+void RECOEff_Study_Histos(int debug=0) {
+
 
      TString workdir;
      std::vector<TFile*> InputFiles_signal_DY;
@@ -58,6 +66,7 @@ double sumweights[11] = {758771667841.549683,150453917158.292908,219884886.21476
 int mass[11] = {10,50,100,200,400,500,700,800,1000,1500,2000};
 
  workdir = "/tmp/arun/eos/cms/store/group/phys_higgs/cmshww/arun/DYAnalysis_76X_Calibrated/DY_Signal/";
+ //workdir = "/home/andriusj/DY13TeV/DYAnalysis_76X_Calibrated/";
  InputFiles_signal_DY.clear();
 
  InputFiles_signal_DY.push_back(TFile::Open(workdir+"DY_10to50.root"));
@@ -72,8 +81,29 @@ int mass[11] = {10,50,100,200,400,500,700,800,1000,1500,2000};
  InputFiles_signal_DY.push_back(TFile::Open(workdir+"DY_1500to2000.root"));
  InputFiles_signal_DY.push_back(TFile::Open(workdir+"DY_2000to3000.root"));
 
+ const Int_t nMassBin = 43;
 
-  int nsample = InputFiles_signal_DY.size();
+ Double_t MassBinEdges[44] = {15,20,25,30,35,40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,115,120,126,133,141,150,160,171,185,200,220,243,273,320,380,440,510,600,700,830,1000,1500,3000};
+
+ TH1D* h1preFSR_1GeV= new TH1D("h1preFSR_1GeV","preFSR (no cuts);M_{ee} [GeV];weighted count",3100,0,3100);
+ TH1D* h1preFSR= new TH1D("h1preFSR","preFSR;M_{ee} [GeV];weighted count",nMassBin,MassBinEdges);
+
+ h1preFSR_1GeV->Sumw2();
+ h1preFSR_1GeV->SetDirectory(0);
+ h1preFSR->Sumw2();
+ h1preFSR->SetDirectory(0);
+
+ TH1D* h1_eff_sumPass= new TH1D("h1_eff_sumPass","selection passing events;M_{ee} [GeV];weighted count",nMassBin,MassBinEdges);
+ TH1D* h1_eff_sumTot= new TH1D("h1_eff_sumTot","total events in acceptance;M_{ee} [GeV];weighted count",nMassBin,MassBinEdges);
+ TH1D* h1_acc_sumPass= new TH1D("h1_acc_sumPass","sum events passing acceptance cuts;M_{ee} [GeV];weighted count",nMassBin,MassBinEdges);
+ TH1D* h1_acc_sumTot= new TH1D("h1_acc_sumTot","total sum postFSR events;M_{ee} [GeV];weighted count",nMassBin,MassBinEdges);
+ h1_eff_sumPass->Sumw2(); h1_eff_sumPass->SetDirectory(0);
+ h1_eff_sumTot->Sumw2(); h1_eff_sumTot->SetDirectory(0);
+ h1_acc_sumPass->Sumw2(); h1_acc_sumPass->SetDirectory(0);
+ h1_acc_sumTot->Sumw2(); h1_acc_sumTot->SetDirectory(0);
+
+
+ //unsigned int nsample = InputFiles_signal_DY.size();
   TFile* file[11];
 
   for(unsigned int j = 0; j < InputFiles_signal_DY.size(); ++j ) {
@@ -171,10 +201,6 @@ int mass[11] = {10,50,100,200,400,500,700,800,1000,1500,2000};
 
 file[j] = new TFile(Form("DY_%d_EE_76X_forAccEff.root",mass[j]),"RECREATE");
 
-	const Int_t nMassBin = 43;
-
-Double_t MassBinEdges[44] = {15,20,25,30,35,40,45,50,55,60,64,68,72,76,81,86,91,96,101,106,110,115,120,126,133,141,150,160,171,185,200,220,243,273,320,380,440,510,600,700,830,1000,1500,3000};
-
  	TH1D *h_mass_AccTotal = new TH1D("h_mass_AccTotal", "", nMassBin, MassBinEdges);
 	TH1D *h_mass_AccPass = new TH1D("h_mass_AccPass", "", nMassBin, MassBinEdges);
 	TH1D *h_mass_EffTotal = new TH1D("h_mass_EffTotal", "", nMassBin, MassBinEdges);
@@ -222,14 +248,19 @@ double lumiWeight = (xsec[j]/sumweights[j])*2316.969;
 
 cout << "Lumiweight = " << lumiWeight << endl;
 
- int nentries = tmpTree->GetEntries();
+ unsigned int nentries = tmpTree->GetEntries();
  cout<<"entries: "<<nentries<<endl;
 
  for (unsigned int k=0; k < nentries; k++) {
     tmpTree->GetEntry(k);
 
+    if (debug && (k>=10000)) {
+      std::cout << "debug mode: stopping loop at k=" << k << "\n";
+      break;
+    }
     if(k%1000000 == 0){
-      cout << "Events Processed :  " << k << endl;
+      cout << "Events Processed :  " << k
+	   << Form(" (%4.1lf%c)",k*100./double(nentries),'%') << endl;
     }
 
 // sorting of reco electrons
@@ -285,8 +316,8 @@ cout << "Lumiweight = " << lumiWeight << endl;
     elePhi.clear(); 
     eleMediumId.clear();
 
-    unsigned int matchGen = 0;
-    unsigned int matchReco = 0;
+    //unsigned int matchGen = 0;
+    //unsigned int matchReco = 0;
     double postFSRmass = 0.;
     double recomass = 0.;
 
@@ -300,6 +331,10 @@ cout << "Lumiweight = " << lumiWeight << endl;
 if(j==1 && massGen >= 100) continue;
 
     if(!tauFlag && genPreFSR_Pt->size() == 2){
+
+      h1preFSR_1GeV->Fill( massGen, theWeight*lumiWeight );
+      h1preFSR->Fill( massGen, theWeight*lumiWeight );
+
 
       if(genPostFSR_Pt->size() >= 2.){
 	for(unsigned int j=0;j<genPostFSR_Eta->size();j++){
@@ -321,10 +356,13 @@ if(j==1 && massGen >= 100) continue;
       if(Flag_PassAcc) {
          h_mass_AccTotal->Fill(postFSRmass,theWeight*lumiWeight);
          h_mass_AccPass->Fill(postFSRmass,theWeight*lumiWeight);
+	 h1_acc_sumPass->Fill(postFSRmass,theWeight*lumiWeight);
+	 h1_acc_sumTot->Fill(postFSRmass, theWeight*lumiWeight);
          }
       else
       {
            h_mass_AccTotal->Fill(postFSRmass,theWeight*lumiWeight);
+	   h1_acc_sumTot->Fill(postFSRmass, theWeight*lumiWeight);
       }
 
 if(Flag_PassAcc == kTRUE) {
@@ -363,9 +401,12 @@ Flag_PassEff = kTRUE;
 if(Flag_PassEff == kTRUE){
 h_mass_EffPass->Fill(postFSRmass,theWeight*lumiWeight);
 h_mass_EffTotal->Fill(postFSRmass,theWeight*lumiWeight);
+ h1_eff_sumPass->Fill(postFSRmass,theWeight*lumiWeight);
+ h1_eff_sumTot->Fill(postFSRmass,theWeight*lumiWeight);
 }
 else {
 h_mass_EffTotal->Fill(postFSRmass,theWeight*lumiWeight);
+ h1_eff_sumTot->Fill(postFSRmass,theWeight*lumiWeight);
 }
 
 } //Acceptance Condition
@@ -373,4 +414,27 @@ h_mass_EffTotal->Fill(postFSRmass,theWeight*lumiWeight);
 } //event loop
   file[j]->Write();
 }//file loop
+
+
+  TH1D* h1eff=(TH1D*)h1_eff_sumPass->Clone("h1eff");
+  h1eff->SetTitle("Efficiency;M_{ee} [GeV];efficiency");
+  h1eff->Divide(h1_eff_sumPass,h1_eff_sumTot,1,1,"B");
+  TH1D* h1acc=(TH1D*)h1_acc_sumPass->Clone("h1acc");
+  h1acc->SetTitle("Acceptance;M_{ee} [GeV];acceptance");
+  h1acc->Divide(h1_acc_sumPass,h1_acc_sumTot,1,1,"B");
+  TH1D* h1effAcc=(TH1D*)h1_eff_sumPass->Clone("h1effAcc");
+  h1effAcc->SetTitle("Efficiency times Acceptance;M_{ee} [GeV];eff #times A");
+  h1effAcc->Divide(h1_eff_sumPass,h1_acc_sumTot,1,1,"B");
+
+  TFile fout("dyee_preFSR_forAccEff.root","RECREATE");
+  h1preFSR_1GeV->Write();
+  h1preFSR->Write();
+  h1_eff_sumPass->Write();
+  h1_eff_sumTot->Write();
+  h1_acc_sumPass->Write();
+  h1_acc_sumTot->Write();
+  h1eff->Write();
+  h1acc->Write();
+  h1effAcc->Write();
+  fout.Close();
 }
