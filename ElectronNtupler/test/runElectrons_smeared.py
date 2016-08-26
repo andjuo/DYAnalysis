@@ -3,7 +3,7 @@ import FWCore.ParameterSet.Config as cms
 process = cms.Process("Ntupler")
 
 process.load("FWCore.MessageService.MessageLogger_cfi")
-process.MessageLogger.cerr.FwkReport.reportEvery = 10
+process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 process.load("Geometry.CMSCommonData.cmsIdealGeometryXML_cfi");
 process.load("Geometry.CaloEventSetup.CaloGeometry_cfi");
@@ -12,22 +12,22 @@ process.load("Geometry.CaloEventSetup.CaloTopology_cfi");
 #
 # Define input data to read
 #
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10000) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 #process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 #process.GlobalTag.globaltag = 'MCRUN2_74_V9::All'                                             #MC
 #process.GlobalTag.globaltag = 'GR_E_V49::All'                                                 #Data
 
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff")
-#process.GlobalTag.globaltag = cms.string("76X_mcRun2_asymptotic_v12")
-process.GlobalTag.globaltag = cms.string("76X_dataRun2_v15")
+process.GlobalTag.globaltag = cms.string("76X_mcRun2_asymptotic_v12")
+#process.GlobalTag.globaltag = cms.string("76X_dataRun2_v15")
 process.RandomNumberGeneratorService = cms.Service("RandomNumberGeneratorService",
         calibratedPatElectrons = cms.PSet(
-        initialSeed = cms.untracked.uint32(1),
+        initialSeed = cms.untracked.uint32(11001),
         engineName = cms.untracked.string('TRandom3')
         ),
         calibratedElectrons = cms.PSet(
-        initialSeed = cms.untracked.uint32(1),
+        initialSeed = cms.untracked.uint32(11001),
         engineName = cms.untracked.string('TRandom3')
         ),
                                                    )
@@ -40,9 +40,12 @@ inputFilesAOD = cms.untracked.vstring(
 inputFilesMiniAOD = cms.untracked.vstring(
     # MiniAOD test files from /DYJetsToLL_M-50_13TeV-madgraph-pythia8/Phys14DR-PU20bx25_PHYS14_25_V1-v1/MINIAODSIM
 
-'/store/data/Run2015D/SingleElectron/MINIAOD/16Dec2015-v1/20000/00050EF1-F9A6-E511-86B2-0025905A48D0.root'
+#'/store/data/Run2015D/SingleElectron/MINIAOD/16Dec2015-v1/20000/00050EF1-F9A6-E511-86B2-0025905A48D0.root'
 
 #       '/store/mc/RunIIFall15MiniAODv2/ZToEE_NNPDF30_13TeV-powheg_M_2300_3500/MINIAODSIM/PU25nsData2015v1_76X_mcRun2_asymptotic_v12-v1/60000/C84500E1-6BB8-E511-A9D6-002590E505FE.root'
+
+    #'/store/mc/RunIIFall15MiniAODv2/DYJetsToLL_M-100to200_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/MINIAODSIM/PU25nsData2015v1_76X_mcRun2_asymptotic_v12_ext1-v1/60000/18A7905C-2ABF-E511-9F31-0025904A862C.root'
+    'file:/afs/cern.ch/user/a/andriusj/dir-work/DY13TeV-unfold/file18A7-miniAODSIM.root'
 
 )
 useAOD = False
@@ -90,7 +93,7 @@ process.egmGsfElectronIDs.physicsObjectSrc = cms.InputTag('calibratedPatElectron
 
 process.selectedElectrons = cms.EDFilter("PATElectronSelector", 
 src = cms.InputTag("slimmedElectrons"), 
-cut = cms.string("pt > 10 && abs(eta)<2.5") 
+cut = cms.string("pt > 9 && abs(eta)<2.5")
 )
 
 process.ntupler = cms.EDAnalyzer('SimpleElectronNtupler',
@@ -98,7 +101,7 @@ process.ntupler = cms.EDAnalyzer('SimpleElectronNtupler',
                                  #
                                  # Common to all formats objects
                                  #
-                                 isMC     = cms.untracked.bool(False),
+                                 isMC     = cms.untracked.bool(True),
 				 isSIG    = cms.untracked.bool(False),
 				 trigger  = cms.InputTag("TriggerResults::HLT"),
 				 prescale = cms.InputTag("patTrigger"),
@@ -179,7 +182,7 @@ process.hcalDDDSimConstants = cms.ESProducer( "HcalDDDSimConstantsESModule",
 
 process.TFileService = cms.Service("TFileService",
  #                                  fileName = cms.string('DY_MCNLO_50toInf_76X.root')
-				   fileName = cms.string('Data.root')
+				   fileName = cms.string('Data_smeared.root')
                                    )
 
 
