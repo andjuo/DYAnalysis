@@ -97,6 +97,9 @@ src = cms.InputTag("slimmedElectrons"),
 cut = cms.string("pt > 9 && abs(eta)<2.5")
 )
 
+# should have no effect on slimmedElectrons
+#process.calibratedPatElectrons.isMC = cms.bool(True)
+
 process.ntupler = cms.EDAnalyzer('SimpleElectronNtupler',
                                  # The module automatically detects AOD vs miniAOD, so we configure both
                                  #
