@@ -67,6 +67,7 @@ int mass[11] = {10,50,100,200,400,500,700,800,1000,1500,2000};
 
  workdir = "/tmp/arun/eos/cms/store/group/phys_higgs/cmshww/arun/DYAnalysis_76X_Calibrated/DY_Signal/";
  //workdir = "/home/andriusj/DY13TeV/DYAnalysis_76X_Calibrated/";
+ workdir = "/media/sf_Share2/DYee_76X_Calibrated/";
  InputFiles_signal_DY.clear();
 
  InputFiles_signal_DY.push_back(TFile::Open(workdir+"DY_10to50.root"));
@@ -108,8 +109,10 @@ int mass[11] = {10,50,100,200,400,500,700,800,1000,1500,2000};
 
   for(unsigned int j = 0; j < InputFiles_signal_DY.size(); ++j ) {
 
-    TFile *f1 = TFile::Open("/afs/cern.ch/work/a/arun/DYAnalysis2015_76X_v1/CMSSW_7_6_3/src/EgammaWork/ElectronNtupler/test/Analysis_Codes/Data-MC/dataPUDist.root");
-    TFile *f2 = TFile::Open("/afs/cern.ch/work/a/arun/DYAnalysis2015_76X_v1/CMSSW_7_6_3/src/EgammaWork/ElectronNtupler/test/Analysis_Codes/Data-MC/PileUp_MC.root");
+    TString codePath="/afs/cern.ch/work/a/arun/DYAnalysis2015_76X_v1/CMSSW_7_6_3/src/EgammaWork/";
+    codePath="/home/andriusj/DY13TeV/DYanalysis-20160817/";
+    TFile *f1 = TFile::Open(codePath + "ElectronNtupler/test/Analysis_Codes/Data-MC/dataPUDist.root");
+    TFile *f2 = TFile::Open(codePath + "ElectronNtupler/test/Analysis_Codes/Data-MC/PileUp_MC.root");
 
 //data PU histo
     TH1F *DATA_puDist = (TH1F*)f1->Get("pileup");
@@ -225,7 +228,9 @@ int mass[11] = {10,50,100,200,400,500,700,800,1000,1500,2000};
   tmpTree->SetBranchAddress("eta_Ele23", &eta_Ele23);
   tmpTree->SetBranchAddress("phi_Ele23", &phi_Ele23);
 
-file[j] = new TFile(Form("DY_%d_EE_76X_forAccEff_v1.root",mass[j]),"RECREATE");
+  TString outFName=Form("DY_%d_EE_76X_forAccEff_v1.root",mass[j]);
+  if (debug) outFName.ReplaceAll(".root","_debug.root");
+  file[j] = new TFile(outFName,"RECREATE");
 
  	TH1D *h_mass_AccTotal = new TH1D("h_mass_AccTotal", "", nMassBin, MassBinEdges);
 	TH1D *h_mass_AccPass = new TH1D("h_mass_AccPass", "", nMassBin, MassBinEdges);
