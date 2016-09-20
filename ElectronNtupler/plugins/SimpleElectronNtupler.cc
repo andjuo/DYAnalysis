@@ -275,7 +275,7 @@ class SimpleElectronNtupler : public edm::EDAnalyzer {
     std::vector<Float_t> massElec_;
     std::vector<Float_t> chargeElec_;
     std::vector<Float_t> ptElecSmearMean_; // mean value of smeared pT
-    std::vector<Float_t> ptElecSmearVar_; // derived variance of the ptElec
+    std::vector<Float_t> ptElecSmearRMS_; // derived variance of the ptElec
 
     std::vector<Float_t> enSC_;
     std::vector<Float_t> preEnSC_;
@@ -623,7 +623,7 @@ SimpleElectronNtupler::SimpleElectronNtupler(const edm::ParameterSet& iConfig):
   electronTree_->Branch("massElec"  ,  &massElec_    );
   electronTree_->Branch("chargeElec",  &chargeElec_    );
   electronTree_->Branch("ptElecSmearMean", &ptElecSmearMean_ );
-  electronTree_->Branch("ptElecSmearVar" , &ptElecSmearVar_ );
+  electronTree_->Branch("ptElecSmearRMS" , &ptElecSmearRMS_ );
   electronTree_->Branch("enSC"    ,  &enSC_ );
   electronTree_->Branch("preEnSC" ,  &preEnSC_ );
   electronTree_->Branch("rawEnSC" ,  &rawEnSC_ );
@@ -1163,7 +1163,7 @@ SimpleElectronNtupler::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
 	// derive smearing variance
 	double smearMean= el->pt();
-	double smearVar = 0.;
+	double smearRMS = 0.;
 
 	if (nSmearTests_>0) {
 	  // follow https://github.com/cms-sw/cmssw/blob/CMSSW_8_1_X/EgammaAnalysis/ElectronTools/src/ElectronEnergyCalibratorRun2.cc
@@ -1205,13 +1205,13 @@ SimpleElectronNtupler::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	  }
 
 	  double varSqr= sumAvgPtSqr - smearMean*smearMean;
-	  smearVar= (varSqr<0) ? -sqrt(-varSqr) : sqrt(varSqr);
+	  smearRMS= (varSqr<0) ? -sqrt(-varSqr) : sqrt(varSqr);
 
-	  if (debugSmear_ && h1) { std::cout << "debug: orig pt=" << el->pt() << ", mean(code)=" << smearMean << " +- " << smearVar << ", mean(histo)=" << h1->GetMean() << " +- " << h1->GetRMS() << "\n"; }
+	  if (debugSmear_ && h1) { std::cout << "debug: orig pt=" << el->pt() << ", mean(code)=" << smearMean << " +- " << smearRMS << ", mean(histo)=" << h1->GetMean() << " +- " << h1->GetRMS() << "\n"; }
 	}
 
 	ptElecSmearMean_.push_back(smearMean);
-	ptElecSmearVar_.push_back(smearVar);
+	ptElecSmearRMS_.push_back(smearRMS);
 
 	double R = sqrt(el->superCluster()->x()*el->superCluster()->x() + el->superCluster()->y()*el->superCluster()->y() +el->superCluster()->z()*el->superCluster()->z());
 	double Rt = sqrt(el->superCluster()->x()*el->superCluster()->x() + el->superCluster()->y()*el->superCluster()->y());
@@ -1488,7 +1488,7 @@ SimpleElectronNtupler::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     massElec_.clear();
     chargeElec_.clear();
     ptElecSmearMean_.clear();
-    ptElecSmearVar_.clear();
+    ptElecSmearRMS_.clear();
 
     enSC_.clear();
     preEnSC_.clear();
