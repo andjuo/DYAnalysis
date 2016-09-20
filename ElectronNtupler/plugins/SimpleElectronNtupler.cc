@@ -290,18 +290,6 @@ class SimpleElectronNtupler : public edm::EDAnalyzer {
     std::vector<Float_t> eleInBarrel_;
     std::vector<Float_t> eleInEndcap_;
 
-    // additional fields for SimpleElectron
-    std::vector<Float_t> eleClass_;
-    std::vector<Float_t> full5x5_r9_;
-    std::vector<Float_t> trackMomAtVtx_R_;
-    std::vector<Float_t> trackMomErr_;
-    std::vector<Float_t> corrEcalEn_;
-    std::vector<Float_t> corrEcalEnErr_;
-    std::vector<Bool_t> ecalDriven_;
-    std::vector<Bool_t> trackerDrivenSeed_;
-    std::vector<Float_t> eleCombinedP4_;
-    std::vector<Float_t> eleCombinedP4Err_;
-
     std::vector<Int_t> passVetoId_;
     std::vector<Int_t> passLooseId_;
     std::vector<Int_t> passMediumId_;
@@ -659,19 +647,6 @@ SimpleElectronNtupler::SimpleElectronNtupler(const edm::ParameterSet& iConfig):
   electronTree_->Branch("eleInBarrel", &eleInBarrel_);
   electronTree_->Branch("eleInEndcap", &eleInEndcap_);
 
-  // additional branches for SimpleElectron
-  electronTree_->Branch("eleClass", &eleClass_);
-  electronTree_->Branch("full5x5_r9", &full5x5_r9_);
-  electronTree_->Branch("trackMomAtVtx_R", &trackMomAtVtx_R_);
-  electronTree_->Branch("trackMomErr", &trackMomErr_);
-  electronTree_->Branch("corrEcalEn", &corrEcalEn_);
-  electronTree_->Branch("corrEcalEnErr", &corrEcalEnErr_);
-  electronTree_->Branch("ecalDriven", &ecalDriven_);
-  electronTree_->Branch("trackerDrivenSeed", &trackerDrivenSeed_);
-  electronTree_->Branch("eleCombinedP4", &eleCombinedP4_);
-  electronTree_->Branch("eleCombinedP4Err", &eleCombinedP4Err_);
-
-  // Muons
   electronTree_->Branch("nMuons", &nMuons);
   electronTree_->Branch("isLooseMuon", &isLooseMuon_);
   electronTree_->Branch("isTightMuon", &isTightMuon_);
@@ -1125,7 +1100,7 @@ SimpleElectronNtupler::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
       // Kinematics
 
-      if(el->pt() > 9. && el->eta() <= 2.5){
+      if(el->pt() > 10. && el->eta() <= 2.5){
 
 	nElectrons++;
 	ptElec_.push_back( el->pt() );
@@ -1276,17 +1251,6 @@ SimpleElectronNtupler::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	// ECAL driven
 	eleEcalDrivenSeed_.push_back(el->ecalDrivenSeed());
 
-	// additional fields for SimpleElectron
-	eleClass_.push_back(el->classification());
-	full5x5_r9_.push_back(el->full5x5_r9());
-	trackMomAtVtx_R_.push_back(el->trackMomentumAtVtx().R());
-	trackMomErr_.push_back(el->trackMomentumError());
-	corrEcalEn_.push_back(el->correctedEcalEnergy());
-	corrEcalEnErr_.push_back(el->correctedEcalEnergyError());
-	ecalDriven_.push_back(el->ecalDriven());
-	trackerDrivenSeed_.push_back(el->trackerDrivenSeed());
-	eleCombinedP4_.push_back(el->p4(reco::GsfElectron::P4_COMBINATION).P());
-	eleCombinedP4Err_.push_back(el->p4Error(reco::GsfElectron::P4_COMBINATION));
       }
     }
 
@@ -1482,18 +1446,6 @@ SimpleElectronNtupler::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
     eleInBarrel_.clear();
     eleInEndcap_.clear();
-
-    // additional fields for SimpleElectron
-    eleClass_.clear();
-    full5x5_r9_.clear();
-    trackMomAtVtx_R_.clear();
-    trackMomErr_.clear();
-    corrEcalEn_.clear();
-    corrEcalEnErr_.clear();
-    ecalDriven_.clear();
-    trackerDrivenSeed_.clear();
-    eleCombinedP4_.clear();
-    eleCombinedP4Err_.clear();
 
     isLooseMuon_.clear();
     isTightMuon_.clear();
