@@ -55,7 +55,7 @@ Bool_t isPassAccCondition_Electron(double leadpt, double leadeta, double sublead
 	return isPassAcc;
 }
 
-void RECOEff_Study_Histos(int debug=0) {
+void RECOEff_Study_Histos_steps(int debug=0) {
 
 
      TString workdir;
@@ -103,6 +103,18 @@ int mass[11] = {10,50,100,200,400,500,700,800,1000,1500,2000};
  h1_acc_sumPass->Sumw2(); h1_acc_sumPass->SetDirectory(0);
  h1_acc_sumTot->Sumw2(); h1_acc_sumTot->SetDirectory(0);
 
+ TH1D* h1_eff_sumPass_chk= new TH1D("h1_eff_sumPass_chk","selection passing events chk;M_{ee} [GeV];weighted count",nMassBin,MassBinEdges);
+ TH1D* h1_eff_sumPass_noPU= new TH1D("h1_eff_sumPass_noPU","selection passing events (noPU);M_{ee} [GeV];weighted (noPU) count",nMassBin,MassBinEdges);
+ TH1D *h1_eff_sumPass_noTrigObjMatching= new TH1D("h1_eff_sumPass_noTrigObjMatching","selection passing events (noTrigObjMatching);M_{ee} [GeV];weighted (noPU) count",nMassBin,MassBinEdges);
+ TH1D* h1_eff_sumPass_matchDR3= new TH1D("h1_eff_sumPass_matchDR3","selection passing events (matchDR3);M_{ee} [GeV];weighted (matchDR3) count",nMassBin,MassBinEdges);
+ TH1D* h1_eff_sumPass_noTrig= new TH1D("h1_eff_sumPass_noTrig","selection passing events (noTrig);M_{ee} [GeV];weighted count",nMassBin,MassBinEdges);
+ TH1D *h1_eff_sumPass_noTrigNoPU= new TH1D("h1_eff_sumPass_noTrigNoPU","selection passing events (noTrigNoPU);M_{ee} [GeV];weighted (noPU) count",nMassBin,MassBinEdges);
+ h1_eff_sumPass_chk->Sumw2(); h1_eff_sumPass_chk->SetDirectory(0);
+ h1_eff_sumPass_noPU->Sumw2(); h1_eff_sumPass_noPU->SetDirectory(0);
+ h1_eff_sumPass_noTrigObjMatching->Sumw2(); h1_eff_sumPass_noTrigObjMatching->SetDirectory(0);
+ h1_eff_sumPass_matchDR3->Sumw2(); h1_eff_sumPass_matchDR3->SetDirectory(0);
+ h1_eff_sumPass_noTrig->Sumw2(); h1_eff_sumPass_noTrig->SetDirectory(0);
+ h1_eff_sumPass_noTrigNoPU->Sumw2(); h1_eff_sumPass_noTrigNoPU->SetDirectory(0);
 
  //unsigned int nsample = InputFiles_signal_DY.size();
   TFile* file[11];
@@ -228,9 +240,7 @@ int mass[11] = {10,50,100,200,400,500,700,800,1000,1500,2000};
   tmpTree->SetBranchAddress("eta_Ele23", &eta_Ele23);
   tmpTree->SetBranchAddress("phi_Ele23", &phi_Ele23);
 
-  TString outFName=Form("DY_%d_EE_76X_forAccEff_v1.root",mass[j]);
-  if (debug) outFName.ReplaceAll(".root","_debug.root");
-  file[j] = new TFile(outFName,"RECREATE");
+file[j] = new TFile(Form("DY_%d_EE_76X_forAccEff_v1steps.root",mass[j]),"RECREATE");
 
  	TH1D *h_mass_AccTotal = new TH1D("h_mass_AccTotal", "", nMassBin, MassBinEdges);
 	TH1D *h_mass_AccPass = new TH1D("h_mass_AccPass", "", nMassBin, MassBinEdges);
@@ -427,10 +437,12 @@ Bool_t Flag_PassEff = kFALSE;
 
       if(newelePt.size()==2){
       int countTrig = 0;
+      int countTrigDR3 = 0;
       for(unsigned int j = 0; j < pt_Ele23->size(); j++){
           dR1 = deltaR(neweleEta.at(0), newelePhi.at(0), eta_Ele23->at(j), phi_Ele23->at(j));
           dR2 = deltaR(neweleEta.at(1), newelePhi.at(1), eta_Ele23->at(j), phi_Ele23->at(j));
           if(dR1 < 0.1 || dR2 < 0.1) countTrig++;
+	  if(dR1 < 0.3 || dR2 < 0.3) countTrigDR3++;
         } // trigger_object loop
           Bool_t isPassAcc = kFALSE;
           isPassAcc = isPassAccCondition_Electron(newelePt.at(0),newSCeta.at(0),newelePt.at(1),newSCeta.at(1));
@@ -444,7 +456,24 @@ Bool_t Flag_PassEff = kFALSE;
 if(isPassAcc == kTRUE && recomass > 10. && countTrig != 0 && Ele23_WPLoose) {
 Flag_PassEff = kTRUE;
 } // acceptance on RECO
+
+      if (isPassAcc == kTRUE && recomass > 10.) {
+	double w=theWeight*lumiWeight;
+	double wPU= w*puWeights;
+	if (countTrig!=0 && Ele23_WPLoose) {
+	  h1_eff_sumPass_chk->Fill(postFSRmass, wPU);
+	  h1_eff_sumPass_noPU->Fill(postFSRmass, w);
+	}
+	if (Ele23_WPLoose) {
+	  h1_eff_sumPass_noTrigObjMatching->Fill(postFSRmass, wPU);
+	  if (countTrigDR3!=0)
+	    h1_eff_sumPass_matchDR3->Fill(postFSRmass, wPU);
+	}
+	h1_eff_sumPass_noTrig->Fill(postFSRmass, wPU);
+	h1_eff_sumPass_noTrigNoPU->Fill(postFSRmass, w);
+      }
 } //size == 2
+
 if(Flag_PassEff == kTRUE){
 h_mass_EffPass->Fill(postFSRmass,theWeight*lumiWeight*puWeights);
 h_mass_EffTotal->Fill(postFSRmass,theWeight*lumiWeight);
@@ -462,7 +491,7 @@ h_mass_EffTotal->Fill(postFSRmass,theWeight*lumiWeight);
   file[j]->Write();
 }//file loop
 
-/*
+
   TH1D* h1eff=(TH1D*)h1_eff_sumPass->Clone("h1eff");
   h1eff->SetTitle("Efficiency;M_{ee} [GeV];efficiency");
   h1eff->Divide(h1_eff_sumPass,h1_eff_sumTot,1,1,"B");
@@ -473,7 +502,7 @@ h_mass_EffTotal->Fill(postFSRmass,theWeight*lumiWeight);
   h1effAcc->SetTitle("Efficiency times Acceptance;M_{ee} [GeV];eff #times A");
   h1effAcc->Divide(h1_eff_sumPass,h1_acc_sumTot,1,1,"B");
 
-  TFile fout("dyee_preFSR_forAccEff_v1.root","RECREATE");
+  TFile fout("dyee_preFSR_forAccEff_v1steps.root","RECREATE");
   h1preFSR_1GeV->Write();
   h1preFSR->Write();
   h1_eff_sumPass->Write();
@@ -483,6 +512,13 @@ h_mass_EffTotal->Fill(postFSRmass,theWeight*lumiWeight);
   h1eff->Write();
   h1acc->Write();
   h1effAcc->Write();
+
+  h1_eff_sumPass_chk->Write();
+  h1_eff_sumPass_noPU->Write();
+  h1_eff_sumPass_noTrigObjMatching->Write();
+  h1_eff_sumPass_matchDR3->Write();
+  h1_eff_sumPass_noTrig->Write();
+  h1_eff_sumPass_noTrigNoPU->Write();
   fout.Close();
-*/
+
 }
