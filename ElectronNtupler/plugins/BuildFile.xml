@@ -5,4 +5,5 @@
 <use name="DataFormats/PatCandidates"/>
 <use name="RecoEgamma/EgammaTools"/>
 <use name="DataFormats/Common"/>
+<use name="EgammaAnalysis/ElectronTools"/>
 <flags EDM_PLUGIN="1"/>

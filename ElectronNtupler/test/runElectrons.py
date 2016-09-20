@@ -158,9 +158,15 @@ process.ntupler = cms.EDAnalyzer('SimpleElectronNtupler',
 				 # diagnostics for each candidate. Use it in a low event count test job.
 				 eleMediumIdFullInfoMap = cms.InputTag("egmGsfElectronIDs:cutBasedElectronID-Spring15-25ns-V1-standalone-medium",),
 				 eleIdVerbose = cms.bool(False),
-				 objects = cms.InputTag('selectedPatTrigger')
+				 objects = cms.InputTag('selectedPatTrigger'),
 				 #tagFilterName   = cms.vstring("hltEle23Ele12CaloIdTrackIdIsoTrackIsoLeg1Filter"),
 				 #probeFilterName = cms.vstring("hltEle23Ele12CaloIdTrackIdIsoTrackIsoLeg2Filter")
+
+                                 nSmearTests = cms.uint32(100),
+                                 rndSeed = cms.int32(11001),
+                                 gbrForestName = cms.string('gedelectron_p4combination_25ns'),
+                                 ecalEnCorrectionFilePath = cms.string('EgammaAnalysis/ElectronTools/data/76X_16DecRereco_2015'),
+                                 debugSmear = cms.bool(False)
                                  )
 
 process.primaryVertexFilter  = cms.EDFilter("VertexSelector",

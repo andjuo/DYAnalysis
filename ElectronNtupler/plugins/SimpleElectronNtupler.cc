@@ -13,6 +13,7 @@ Implementation:
 //
 // Original Author:  Ilya Kravchenko
 //         Created:  Thu, 10 Jul 2014 09:54:13 GMT
+//         A.Juodagalvis modified to derive smearing variance, Sept 20, 2016
 //
 //
 
@@ -93,6 +94,16 @@ Implementation:
 #include "RecoEgamma/EgammaIsolationAlgos/interface/HcalPFClusterIsolation.h"
 #include "RecoEgamma/EgammaIsolationAlgos/interface/EcalPFClusterIsolation.h"
 
+// To produce smearing variance
+#include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "CondFormats/DataRecord/interface/GBRWrapperRcd.h"
+#include "CondFormats/EgammaObjects/interface/GBRForest.h"
+#include "EgammaAnalysis/ElectronTools/interface/SimpleElectron.h"
+#include "EgammaAnalysis/ElectronTools/interface/EpCombinationTool.h"
+#include "EgammaAnalysis/ElectronTools/interface/ElectronEnergyCalibratorRun2.h"
+#include <TRandom3.h>
+#include <TH1F.h>
 
 //
 // class declaration
@@ -161,6 +172,7 @@ class SimpleElectronNtupler : public edm::EDAnalyzer {
     // Verbose output for ID
     bool verboseIdFlag_;
 
+    //
     edm::Service<TFileService> fs;
     TTree *electronTree_;
 
@@ -169,6 +181,17 @@ class SimpleElectronNtupler : public edm::EDAnalyzer {
     // If MC
     bool misMC;
     bool misSIG;
+
+    // To derive smearing variance
+    UInt_t nSmearTests_;
+    int rndSeed_;    // seed to initialize random number engine
+    std::string theGBRForestName_;
+    std::string theEcalEnCorrectionFilePath_;
+    bool debugSmear_; // save extra info about smearing
+    edm::ESHandle<GBRForest> theGBRForestHandle;
+    EpCombinationTool theEpCombinationTool;
+    ElectronEnergyCalibratorRun2 theEnCorrectorRun2;
+    TFileDirectory debugDir;
 
     // Weights for MC@NLO
     double theWeight;
@@ -251,6 +274,8 @@ class SimpleElectronNtupler : public edm::EDAnalyzer {
     std::vector<Float_t> energyElec_;
     std::vector<Float_t> massElec_;
     std::vector<Float_t> chargeElec_;
+    std::vector<Float_t> ptElecSmearMean_; // mean value of smeared pT
+    std::vector<Float_t> ptElecSmearVar_; // derived variance of the ptElec
 
     std::vector<Float_t> enSC_;
     std::vector<Float_t> preEnSC_;
@@ -395,8 +420,16 @@ SimpleElectronNtupler::SimpleElectronNtupler(const edm::ParameterSet& iConfig):
 //  elenontrigMVAlooseMapToken_(consumes<edm::ValueMap<bool> >(iConfig.getParameter<edm::InputTag>("elenontrigMVAlooseIdMap"))),
 //  elenontrigMVAtightMapToken_(consumes<edm::ValueMap<bool> >(iConfig.getParameter<edm::InputTag>("elenontrigMVAtightIdMap"))),
   eleMediumIdFullInfoMapToken_(consumes<edm::ValueMap<vid::CutFlowResult> >(iConfig.getParameter<edm::InputTag>("eleMediumIdFullInfoMap"))),
-  verboseIdFlag_(iConfig.getParameter<bool>("eleIdVerbose"))
+  verboseIdFlag_(iConfig.getParameter<bool>("eleIdVerbose")),
 
+  misMC (iConfig.getUntrackedParameter<bool>("isMC")),
+  nSmearTests_(iConfig.getParameter<unsigned int>("nSmearTests")),
+  rndSeed_(iConfig.getParameter<int>("rndSeed")),
+  theGBRForestName_(iConfig.getParameter<std::string>("gbrForestName")),
+  theEcalEnCorrectionFilePath_(iConfig.getParameter<std::string>("ecalEnCorrectionFilePath")),
+  debugSmear_(iConfig.getParameter<bool>("debugSmear")),
+  theEpCombinationTool(),
+  theEnCorrectorRun2(theEpCombinationTool, misMC, false, theEcalEnCorrectionFilePath_)
 {
 
   ele23_WPLoose = "(HLT_Ele23_WPLoose_Gsf_v)(.*)";
@@ -417,8 +450,12 @@ SimpleElectronNtupler::SimpleElectronNtupler(const edm::ParameterSet& iConfig):
   Photon_120 = "(HLT_Photon120_v)(.*)";
   Photon_175 = "(HLT_Photon175_v)(.*)";
 
-  misMC            = iConfig.getUntrackedParameter<bool>("isMC");
+  //misMC            = iConfig.getUntrackedParameter<bool>("isMC");
   misSIG           = iConfig.getUntrackedParameter<bool>("isSIG");
+
+  // initialize the random number generator
+  gRandom->SetSeed(rndSeed_);
+  theEnCorrectorRun2.initPrivateRng(gRandom);
 
   // Prepare tokens for all input collections and objects
 
@@ -585,6 +622,8 @@ SimpleElectronNtupler::SimpleElectronNtupler(const edm::ParameterSet& iConfig):
   electronTree_->Branch("energyElec",  &energyElec_    );
   electronTree_->Branch("massElec"  ,  &massElec_    );
   electronTree_->Branch("chargeElec",  &chargeElec_    );
+  electronTree_->Branch("ptElecSmearMean", &ptElecSmearMean_ );
+  electronTree_->Branch("ptElecSmearVar" , &ptElecSmearVar_ );
   electronTree_->Branch("enSC"    ,  &enSC_ );
   electronTree_->Branch("preEnSC" ,  &preEnSC_ );
   electronTree_->Branch("rawEnSC" ,  &rawEnSC_ );
@@ -602,7 +641,6 @@ SimpleElectronNtupler::SimpleElectronNtupler(const edm::ParameterSet& iConfig):
   electronTree_->Branch("ecalIso", &ecalIso_);
   electronTree_->Branch("hcalIso", &hcalIso_);
   electronTree_->Branch("trkIso", &trkIso_);
-
 
   electronTree_->Branch("dEtaIn",  &dEtaIn_);
   electronTree_->Branch("dPhiIn",  &dPhiIn_);
@@ -674,6 +712,7 @@ SimpleElectronNtupler::SimpleElectronNtupler(const edm::ParameterSet& iConfig):
   electronTree_->Branch("etaPhoton" ,  &etaPhoton_ );
   electronTree_->Branch("phiPhoton" ,  &phiPhoton_ );
 
+  if (debugSmear_) debugDir = fs->mkdir("debugSmear");
 }
 
 SimpleElectronNtupler::~SimpleElectronNtupler()
@@ -1058,6 +1097,17 @@ SimpleElectronNtupler::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     // Seems always zero. Not stored in miniAOD...?
     pvNTracks = firstGoodVertex->nTracks();
 
+    // Get ready for smearing tests, if needed
+    if (nSmearTests_>0){
+      iSetup.get<GBRWrapperRcd>().get(theGBRForestName_, theGBRForestHandle);
+      if (!theGBRForestHandle.isValid()) {
+	std::cout << "could not obtain theGBRForestHandle\n";
+	return;
+      }
+      theEpCombinationTool.init(theGBRForestHandle.product());
+    }
+
+
 
     // Get the conversions collection
     edm::Handle<reco::ConversionCollection> conversions;
@@ -1110,6 +1160,58 @@ SimpleElectronNtupler::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	energyElec_.push_back( el->energy() );
 	massElec_.push_back( el->mass() );
 	chargeElec_.push_back( el->charge() );
+
+	// derive smearing variance
+	double smearMean= el->pt();
+	double smearVar = 0.;
+
+	if (nSmearTests_>0) {
+	  // follow https://github.com/cms-sw/cmssw/blob/CMSSW_8_1_X/EgammaAnalysis/ElectronTools/src/ElectronEnergyCalibratorRun2.cc
+	  // Calibration changes the object, so save a few fields
+	  SimpleElectron simple(*el,RunNo,misMC);
+	  double keep_newEnergy= simple.getNewEnergy();
+	  double keep_newEnergyErr= simple.getNewEnergyError();
+	  TH1F *h1series=NULL, *h1=NULL;
+	  if (debugSmear_) {
+	    TString h1name=Form("h1debugSmear_%1.0lf_%1.0lf_%d",RunNo,EvtNo,int(i));
+	    TString h1nameTest= h1name + TString("_test");
+	    h1series=  debugDir.make<TH1F>(h1name,h1name,nSmearTests_,0.,nSmearTests_);
+	    h1= debugDir.make<TH1F>(h1nameTest,h1nameTest,100,el->pt()-20.,el->pt()+20.);
+	  }
+
+	  smearMean = 0; // average of sum(pt)
+	  double sumAvgPtSqr=0; // average of sum (pt*pt)
+	  for (UInt_t itest=0; itest<nSmearTests_; itest++) {
+
+	    // calibrate the electron
+	    // this updates the combinedMomentum value
+	    theEnCorrectorRun2.calibrate(simple);
+
+	    // get changed pt. CombinedMomentum() is full energy
+	    // (see SimpleElectron::writeTo)
+	    double newPt= simple.getCombinedMomentum() * el->pt()/el->energy();
+	    //std::cout << "debug: orig pt=" << el->pt() << ", new pt=" << newPt << "\n";
+	    smearMean += newPt/double(nSmearTests_);
+	    sumAvgPtSqr += newPt*newPt/double(nSmearTests_);
+
+	    if (debugSmear_) {
+	      h1series->SetBinContent(itest+1,newPt);
+	      h1->Fill(newPt);
+	    }
+
+	    // restore values
+	    simple.setNewEnergy(keep_newEnergy);
+	    simple.setNewEnergyError(keep_newEnergyErr);
+	  }
+
+	  double varSqr= sumAvgPtSqr - smearMean*smearMean;
+	  smearVar= (varSqr<0) ? -sqrt(-varSqr) : sqrt(varSqr);
+
+	  if (debugSmear_ && h1) { std::cout << "debug: orig pt=" << el->pt() << ", mean(code)=" << smearMean << " +- " << smearVar << ", mean(histo)=" << h1->GetMean() << " +- " << h1->GetRMS() << "\n"; }
+	}
+
+	ptElecSmearMean_.push_back(smearMean);
+	ptElecSmearVar_.push_back(smearVar);
 
 	double R = sqrt(el->superCluster()->x()*el->superCluster()->x() + el->superCluster()->y()*el->superCluster()->y() +el->superCluster()->z()*el->superCluster()->z());
 	double Rt = sqrt(el->superCluster()->x()*el->superCluster()->x() + el->superCluster()->y()*el->superCluster()->y());
@@ -1385,6 +1487,8 @@ SimpleElectronNtupler::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     energyElec_.clear();
     massElec_.clear();
     chargeElec_.clear();
+    ptElecSmearMean_.clear();
+    ptElecSmearVar_.clear();
 
     enSC_.clear();
     preEnSC_.clear();
@@ -1484,6 +1588,7 @@ SimpleElectronNtupler::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   void 
     SimpleElectronNtupler::endJob() 
     {
+
     }
 
   // ------------ method called when starting to processes a run  ------------
