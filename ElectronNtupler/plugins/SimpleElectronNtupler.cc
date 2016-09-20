@@ -1150,7 +1150,7 @@ SimpleElectronNtupler::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
       // Kinematics
 
-      if(el->pt() > 10. && el->eta() <= 2.5){
+      if(el->pt() > 9. && el->eta() <= 2.5){
 
 	nElectrons++;
 	ptElec_.push_back( el->pt() );
