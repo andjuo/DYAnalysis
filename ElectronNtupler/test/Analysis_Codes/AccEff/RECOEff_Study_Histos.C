@@ -405,7 +405,7 @@ double dR1(0.),dR2(0.);
 
 if(Flag_PassAcc == kTRUE) {
 Bool_t Flag_PassEff = kFALSE;
-
+int count_GoodRecoElectronsInAcc=0;
       if(ptElec->size()>=2.){
         for(unsigned int i=0;i<ptElec->size();i++){
  //         heepId = passHEEPId->at(index1[i]);
@@ -414,17 +414,24 @@ Bool_t Flag_PassEff = kFALSE;
      //     passId = heepId;            
           if(passId) {
 	    if(fabs(etaSC->at(index1[i])) < 2.5 && !(fabs(etaSC->at(index1[i])) > 1.4442 && fabs(etaSC->at(index1[i])) < 1.566)){
+	    count_GoodRecoElectronsInAcc++;
+	    /*
             newelePt.push_back(ptElec->at(index1[i]));
             neweleEta.push_back(etaElec->at(index1[i]));
             neweleEnr.push_back(energyElec->at(index1[i]));
             newelePhi.push_back(phiElec->at(index1[i]));
             neweleMediumId.push_back(passMediumId->at(index1[i]));
             newSCeta.push_back(etaSC->at(index1[i]));
+	    */
           } //eta    
           } // id
           } //nEle
           } //size >=2
 
+      if ((count_GoodRecoElectronsInAcc==2) && Ele23_WPLoose)
+	Flag_PassEff=kTRUE;
+
+      /*
       if(newelePt.size()==2){
       int countTrig = 0;
       for(unsigned int j = 0; j < pt_Ele23->size(); j++){
@@ -445,6 +452,7 @@ if(isPassAcc == kTRUE && recomass > 10. && countTrig != 0 && Ele23_WPLoose) {
 Flag_PassEff = kTRUE;
 } // acceptance on RECO
 } //size == 2
+      */
 if(Flag_PassEff == kTRUE){
 h_mass_EffPass->Fill(postFSRmass,theWeight*lumiWeight*puWeights);
 h_mass_EffTotal->Fill(postFSRmass,theWeight*lumiWeight);
